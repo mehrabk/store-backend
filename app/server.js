@@ -1,6 +1,9 @@
 const path = require("path")
 const express = require("express")
 const mongoose = require("mongoose")
+const { allRoutes } = require("./router/router")
+const morgan = require("morgan")
+const createError = require("http-errors")
 
 module.exports = class Application {
   #app = express()
@@ -18,8 +21,9 @@ module.exports = class Application {
   }
 
   configApplication() {
-    this.#app.use(express.json()) // for recive JSON data
-    this.#app.use(express.urlencoded({ extended: true })) // for recive content-type : x-www-form-urlencode
+    this.#app.use(morgan("dev"))
+    this.#app.use(express.json()) // for receive JSON data
+    this.#app.use(express.urlencoded({ extended: true })) // for receive content-type : x-www-form-urlencode
     this.#app.use(express.static(path.join(__dirname, "..", "public")))
   }
 
@@ -35,24 +39,31 @@ module.exports = class Application {
       if (!err) return console.log("connected to mongodb")
       console.log("failed to connect mongoDB!!!")
     })
+
+    process.on("SIGINT", async () => {
+      await mongoose.connection.close() // for close db connection ?!
+      process.exit(0)
+    })
   }
 
-  createRoutes() {}
+  createRoutes() {
+    this.#app.use(allRoutes)
+  }
 
   errorHandling() {
     this.#app.use((req, res, next) => {
-      return res.status(404).json({
-        statusCode: 404,
-        message: "address not found"
-      })
+      next(createError.NotFound("address not found"))
     })
 
     this.#app.use((error, req, res, next) => {
-      const statusCode = error.status || 500
-      const message = error.message || internalServerError
+      const serverError = createError.InternalServerError
+      const statusCode = error.status || serverError.status
+      const message = error.message || serverError.message
       return res.status(statusCode).json({
-        statusCode,
-        message
+        errors: {
+          statusCode,
+          message
+        }
       })
     })
   }
