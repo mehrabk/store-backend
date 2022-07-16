@@ -1,7 +1,12 @@
 const { getOtpSchema, chechOtpSchema } = require("../../../validators/user/auth.schema")
 const Controller = require("../../controller")
 const createError = require("http-errors")
-const { generateRandom, SignAccessToken } = require("../../../../utils/Utils")
+const {
+  generateRandom,
+  SignAccessToken,
+  VerifyRefreshToken,
+  SignRefreshToken
+} = require("../../../../utils/Utils")
 const { UserModel } = require("../../../../models/users")
 
 module.exports = new (class UserAuthController extends Controller {
@@ -30,12 +35,30 @@ module.exports = new (class UserAuthController extends Controller {
       const user = await UserModel.findOne({ mobile })
       if (!user) throw createError.Unauthorized("user not found")
       if (user.otp.code != code) throw createError.Unauthorized("otp code incorrect")
-      console.log(user.otp.expiresIn, Date.now())
-      console.log(user.otp.expiresIn, new Date().getTime())
       if (Number(user.otp.expiresIn) < Date.now()) throw createError.Unauthorized("expired code")
       const accessToken = await SignAccessToken(user._id)
+      const refreshToken = await SignRefreshToken(user._id)
+      console.log(refreshToken)
+
       return res.json({
-        data: accessToken
+        data: { accessToken, refreshToken }
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async refreshToken(req, res, next) {
+    try {
+      const { refreshToken } = req.body
+      const userId = await VerifyRefreshToken(refreshToken)
+      const accessToken = await SignAccessToken(userId)
+      const newRefreshToken = await SignRefreshToken(userId)
+      return res.json({
+        data: {
+          accessToken,
+          refreshToken: newRefreshToken
+        }
       })
     } catch (error) {
       next(error)
@@ -57,10 +80,12 @@ module.exports = new (class UserAuthController extends Controller {
       Roles: ["USERS"]
     })
   }
+
   async checkExistUser(mobile) {
     const user = await UserModel.findOne({ mobile })
     return !!user
   }
+
   async updateUser(mobile, otp) {
     const incorrectArray = ["", " ", 0, null, undefined, "0", NaN]
 
