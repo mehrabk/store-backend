@@ -8,6 +8,7 @@ const {
   SignRefreshToken
 } = require("../../../../utils/Utils")
 const { UserModel } = require("../../../../models/users")
+const { ROLES } = require("../../../../utils/constans")
 
 module.exports = new (class UserAuthController extends Controller {
   async getOtp(req, res, next) {
@@ -76,7 +77,7 @@ module.exports = new (class UserAuthController extends Controller {
     return await UserModel.create({
       mobile,
       otp,
-      Roles: ["USERS"]
+      Roles: [ROLES.USER]
     })
   }
 
