@@ -14,6 +14,7 @@ module.exports = class Application {
     this.#DB_URI = DB_URI
 
     this.configApplication()
+    this.initRedis()
     this.connectToMongoDB()
     this.createServer()
     this.createRoutes()
@@ -44,6 +45,10 @@ module.exports = class Application {
       await mongoose.connection.close() // for close db connection ?!
       process.exit(0)
     })
+  }
+
+  initRedis() {
+    require("./utils/init-redis")
   }
 
   createRoutes() {

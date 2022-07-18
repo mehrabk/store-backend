@@ -38,7 +38,6 @@ module.exports = new (class UserAuthController extends Controller {
       if (Number(user.otp.expiresIn) < Date.now()) throw createError.Unauthorized("expired code")
       const accessToken = await SignAccessToken(user._id)
       const refreshToken = await SignRefreshToken(user._id)
-      console.log(refreshToken)
 
       return res.json({
         data: { accessToken, refreshToken }
