@@ -2,6 +2,7 @@ const { CategoryModel } = require("../../../models/categories")
 const Controller = require("../controller")
 const createError = require("http-errors")
 const { addCategorySchema } = require("../../validators/admin/category.schema")
+const mongoose = require("mongoose")
 
 class CategoryController extends Controller {
   async addCategory(req, res, next) {
@@ -19,39 +20,129 @@ class CategoryController extends Controller {
       next(error)
     }
   }
-  removeCategory(req, res, next) {
+  async removeCategory(req, res, next) {
     try {
+      const { id } = req.params
+      const category = await this.checkExistCategory(id)
+      // delete category and cildrens
+      const deleteCategory = await CategoryModel.deleteMany({
+        $or: [{ _id: category._id }, { parent: category._id }]
+      })
+      if (deleteCategory.deletedCount == 0) throw createError.InternalServerError("delete category error")
+      return res.status(200).json({
+        data: {
+          statusCode: 200,
+          message: "deleted category successfully"
+        }
+      })
     } catch (error) {
       next(error)
     }
   }
+
+  async checkExistCategory(id) {
+    if (!mongoose.isValidObjectId(id)) throw createError.NotFound("id is not valid")
+    const category = await CategoryModel.findById(id)
+    if (!category) throw createError.NotFound("category not found")
+    return category
+  }
+
   editCategory(req, res, next) {
     try {
     } catch (error) {
       next(error)
     }
   }
-  getAllCategory(req, res, next) {
+  async getAllCategory(req, res, next) {
     try {
+      const categories = await CategoryModel.aggregate([
+        {
+          $lookup: {
+            from: "categories",
+            localField: "_id",
+            foreignField: "parent",
+            as: "children"
+          }
+        },
+
+        {
+          $match: {
+            parent: undefined
+          }
+        },
+        {
+          $project: {
+            __v: 0,
+            parent: 0,
+            "children.__v": 0,
+            "children.parent": 0
+          }
+        }
+      ])
+      res.status(200).json({
+        statusCode: 200,
+        data: categories
+      })
     } catch (error) {
       next(error)
     }
   }
-  getCategoryById(req, res, next) {
+  async getCategoryById(req, res, next) {
     try {
+      const { id } = req.params
+      const categories = await CategoryModel.aggregate([
+        {
+          $match: {
+            _id: mongoose.Types.ObjectId(id)
+          }
+        },
+        {
+          $lookup: {
+            from: "categories",
+            localField: "_id",
+            foreignField: "parent",
+            as: "children"
+          }
+        },
+        {
+          $project: {
+            __v: 0,
+            parent: 0,
+            "children.__v": 0,
+            "children.parent": 0
+          }
+        }
+      ])
+      return res.status(200).json({
+        statusCode: 200,
+        data: categories
+      })
     } catch (error) {
       next(error)
     }
   }
-  getAllParents(req, res, next) {
+  async getAllParents(req, res, next) {
     try {
+      const parents = await CategoryModel.find({ parent: undefined }, { _id: 0, __v: 0 })
+      return res.status(200).json({
+        statusCode: 200,
+        data: { parents }
+      })
     } catch (error) {
       next(error)
     }
   }
 
-  getChildOfParents(req, res, next) {
+  async getChildOfParents(req, res, next) {
     try {
+      const { parent } = req.params
+      const children = await CategoryModel.find({ parent }, { parent: 0, __v: 0 })
+      return res.status(200).json({
+        data: {
+          statusCode: 200,
+          parent: children
+        }
+      })
     } catch (error) {
       next(error)
     }
