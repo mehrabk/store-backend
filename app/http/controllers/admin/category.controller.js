@@ -1,7 +1,7 @@
 const { CategoryModel } = require("../../../models/categories")
 const Controller = require("../controller")
 const createError = require("http-errors")
-const { addCategorySchema } = require("../../validators/admin/category.schema")
+const { addCategorySchema, updateCategorySchema } = require("../../validators/admin/category.schema")
 const mongoose = require("mongoose")
 
 class CategoryController extends Controller {
@@ -39,46 +39,55 @@ class CategoryController extends Controller {
       next(error)
     }
   }
-
   async checkExistCategory(id) {
     if (!mongoose.isValidObjectId(id)) throw createError.NotFound("id is not valid")
     const category = await CategoryModel.findById(id)
     if (!category) throw createError.NotFound("category not found")
     return category
   }
-
-  editCategory(req, res, next) {
+  async editCategoryTitle(req, res, next) {
     try {
+      const { id } = req.params
+      const { title } = req.body
+      await updateCategorySchema.validateAsync(req.body)
+      const category = await this.checkExistCategory(id)
+      const resultOfUpdate = await CategoryModel.updateOne({ _id: id }, { $set: { title } })
+      if (resultOfUpdate.modifiedCount === 0) throw createError.InternalServerError("category update error")
+      return res.status(200).json({
+        statusCode: 200,
+        message: "category updated successfully"
+      })
     } catch (error) {
       next(error)
     }
   }
   async getAllCategory(req, res, next) {
     try {
-      const categories = await CategoryModel.aggregate([
-        {
-          $lookup: {
-            from: "categories",
-            localField: "_id",
-            foreignField: "parent",
-            as: "children"
-          }
-        },
+      // const categories = await CategoryModel.aggregate([
+      //   {
+      //     $lookup: {
+      //       from: "categories",
+      //       localField: "_id",
+      //       foreignField: "parent",
+      //       as: "children"
+      //     }
+      //   },
 
-        {
-          $match: {
-            parent: undefined
-          }
-        },
-        {
-          $project: {
-            __v: 0,
-            parent: 0,
-            "children.__v": 0,
-            "children.parent": 0
-          }
-        }
-      ])
+      //   {
+      //     $match: {
+      //       parent: undefined
+      //     }
+      //   },
+      //   {
+      //     $project: {
+      //       __v: 0,
+      //       parent: 0,
+      //       "children.__v": 0,
+      //       "children.parent": 0
+      //     }
+      //   }
+      // ])
+      const categories = await CategoryModel.find({ parent: undefined }, { __v: 0 })
       res.status(200).json({
         statusCode: 200,
         data: categories
@@ -132,7 +141,27 @@ class CategoryController extends Controller {
       next(error)
     }
   }
+  async getAllCategoryWithoutPopulate(req, res, next) {
+    try {
+      const categories = await CategoryModel.aggregate([
+        {
+          $match: {}
+        },
+        {
+          $project: {
+            parent: 0
+          }
+        }
+      ])
 
+      res.status(200).json({
+        statusCode: 200,
+        data: categories
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
   async getChildOfParents(req, res, next) {
     try {
       const { parent } = req.params
