@@ -1,4 +1,5 @@
 const { AdminRoutes } = require("./admin/admin.routes")
+const { AdminBlogRoutes } = require("./admin/blog")
 const { HomeRoute } = require("./api")
 const { DeveloperRoutes } = require("./developer.routes")
 const { AuthRoute } = require("./user/auth")

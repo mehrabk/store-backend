@@ -83,9 +83,15 @@ function VerifyRefreshToken(token) {
   })
 }
 
+function deleteFileInPublic(fileAddress) {
+  const pathFile = path.join(__dirname, "..", "..", "public", fileAddress)
+  fs.unlinkSync(pathFile)
+}
+
 module.exports = {
   generateRandom,
   SignAccessToken,
   SignRefreshToken,
-  VerifyRefreshToken
+  VerifyRefreshToken,
+  deleteFileInPublic
 }
