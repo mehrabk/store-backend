@@ -3,6 +3,7 @@ const Controller = require("../controller")
 const path = require("path")
 const { BlogModel } = require("../../../models/blogs")
 const { deleteFileInPublic } = require("../../../utils/Utils")
+const createHttpError = require("http-errors")
 
 class BlogController extends Controller {
   async createBlog(req, res, next) {
@@ -34,9 +35,28 @@ class BlogController extends Controller {
 
   async getOneBlogById(req, res, next) {
     try {
+      const { id } = req.params
+      console.log(id)
+      const blog = await this.fingBlog(id)
+      return res.status(200).json({
+        data: {
+          statusCode: 200,
+          blog
+        }
+      })
     } catch (error) {
       next(error)
     }
+  }
+
+  async fingBlog(id) {
+    // const blog = await BlogModel.findById(id).populate([
+    //   { path: "category", select: ["title"] },
+    //   { path: "author", select: ["mobile", "first_name", "last_name", "username"] }
+    // ])
+    const blog = await BlogModel.findById(id)
+    if (!blog) throw createHttpError.NotFound("blog not found")
+    return blog
   }
 
   async getAll(req, res, next) {

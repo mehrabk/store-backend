@@ -6,6 +6,7 @@ const router = require("express").Router()
 
 router.get("/getAll", AdminBlogController.getAll)
 router.post("/add", uploadFile.single("image"), stringToArray("tags"), AdminBlogController.createBlog)
+router.get("/:id", AdminBlogController.getOneBlogById)
 
 module.exports = {
   AdminBlogRoutes: router

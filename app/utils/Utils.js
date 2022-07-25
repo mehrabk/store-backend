@@ -17,7 +17,7 @@ function SignAccessToken(userId) {
       mobile: user.mobile
     }
     const optioins = {
-      expiresIn: "1h"
+      expiresIn: "24h"
     }
 
     JWT.sign(payload, "mehrab", optioins, (err, token) => {
