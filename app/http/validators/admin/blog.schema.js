@@ -3,6 +3,7 @@ const { MongoIDPattern } = require("../../../utils/constans")
 const createError = require("http-errors")
 
 const createBlogSchema = joi.object({
+  author: joi.string().error(createError.BadRequest("title of blog not correct")),
   title: joi.string().min(3).max(30).error(createError.BadRequest("title of blog not correct")),
   text: joi.string().error(createError.BadRequest("text of blog not correct")),
   short_text: joi.string().error(createError.BadRequest("short text not valid")),
@@ -16,7 +17,7 @@ const createBlogSchema = joi.object({
 })
 
 const updateCategorySchema = joi.object({
-  titile: joi.string().min(3).max(30).error(createError.BadRequest("category titile not valid"))
+  title: joi.string().min(3).max(30).error(createError.BadRequest("category titile not valid"))
 })
 
 module.exports = {

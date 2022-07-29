@@ -1,21 +1,43 @@
-const createError = require("http-errors")
+const createHttpError = require("http-errors")
 const JWT = require("jsonwebtoken")
 const { UserModel } = require("../../models/users")
-function VerifyAccessToken(req, res, next) {
-  const headers = req.headers
+
+function getToken(headers) {
   const [bearer, token] = headers?.authorization?.split(" ") || []
-  if (token && bearer?.toLowerCase() === "bearer") {
+  if (token && ["Bearer", "bearer"].includes(bearer)) return token
+  throw createHttpError.Unauthorized("حساب کاربری شناسایی نشد وارد حساب کاربری خود شوید")
+}
+
+function VerifyAccessToken(req, res, next) {
+  try {
+    const token = getToken(req.headers)
     JWT.verify(token, "mehrab", async (err, payload) => {
-      if (err) return next(createError.Unauthorized("token incorrect or expires"))
+      if (err) throw createHttpError.Unauthorized("token incorrect or expires")
       const { mobile } = payload || {}
       const user = await UserModel.findOne({ mobile }, { password: 0, otp: 0 })
-      if (!user) return next(createError.Unauthorized("user not found"))
+      if (!user) throw createHttpError.Unauthorized("user not found")
       req.user = user
       next()
     })
-  } else next(createError.Unauthorized("sign to your account"))
+  } catch (error) {
+    next(error)
+  }
+}
+
+function checkRole(role) {
+  return function (req, res, next) {
+    try {
+      const user = req.user
+      console.log(user)
+      if (user?.Roles.includes(role)) return next()
+      throw createHttpError.Forbidden("you not have permission to access this section")
+    } catch (error) {
+      next(error)
+    }
+  }
 }
 
 module.exports = {
-  VerifyAccessToken
+  VerifyAccessToken,
+  checkRole
 }
